@@ -4,12 +4,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ department.org_id|upper }}</title>
-    {% if department.logo %}
+    <title>{{ department.dept_name|upper }} - Login</title>
+    {% if department.dept_logo %}
     <link
       rel="icon"
       type="image/x-icon"
-      href="{{ department.logo.url }}"
+      href="{{ department.dept_logo.url }}"
     />
     {% endif %}
     <link
@@ -24,23 +24,19 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
       rel="stylesheet"
     />
-    <!-- Leaflet CSS -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
     <style>
       body {
         margin: 0;
         font-family: "Poppins", sans-serif;
-        background: linear-gradient(
-          to bottom right,
-          #f8f7fe,
-          #d6dbeb
-        ) !important;
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        {% if department.dept_login_bg %}
+        background: url('{{ department.dept_login_bg.url }}') no-repeat center center fixed;
+        background-size:cover;
+        {% else %}
+        background: linear-gradient(to bottom right, #f8f7fe, #d6dbeb);
+        {% endif %}
       }
 
       .navbar {
@@ -72,40 +68,6 @@
         padding-left: 0;
       }
 
-      .control-bar {
-        background: #e1c89c;
-        padding: 2px 8px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-        position: relative;
-        z-index: 1040;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: #fff;
-        width: 100%;
-        margin-top: 1px;
-        margin-bottom: 3px;
-        font-size: 12px;
-        height: 30px;
-        border-radius: 5px;
-      }
-
-      .map-container {
-        position: relative;
-        flex-grow: 1;
-        height: calc(100vh - 110px);
-        overflow: hidden;
-      }
-
-      #map {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 1;
-      }
-
       .login-container {
         position: absolute;
         top: 50%;
@@ -114,8 +76,8 @@
         width: 450px;
         max-width: 90%;
         height: auto;
-        min-height: 500px;
-        max-height: 90vh;
+        min-height: 450px;
+        /* max-height: 90vh; */
         background: white;
         padding: 20px 15px 20px 25px;
         box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
@@ -204,31 +166,6 @@
         font-size: 14px;
       }
 
-      .footer {
-        background: #2e037e;
-        color: white;
-        text-align: center;
-        padding: 0.4rem 0.5rem;
-        font-size: 14px;
-        box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
-      }
-
-      .footer strong {
-        color: #ffffff;
-        font-weight: bold;
-      }
-
-      .layer-control {
-        position: absolute;
-        top: 8px;
-        left: 60px;
-        background-color: rgba(255, 255,  TESTING:  Added Department Link
-      padding: 10px;
-        border-radius: 5px;
-        z-index: 1050;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      }
-
       .modal-content {
         border-radius: 10px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -285,9 +222,9 @@
     <nav class="navbar shadow-sm">
       <div class="container-fluid">
         <a class="navbar-brand" href="/">
-          {% if department.logo %}
+          {% if department.dept_logo %}
           <img
-            src="{{ department.logo.url }}"
+            src="{{ department.dept_logo.url }}"
             alt="Logo"
             width="50"
             height="50"
@@ -295,103 +232,81 @@
           {% endif %}
         </a>
         <div class="navbar-title">
-          <span class="company-name">{{ department.name }}</span>
+          <span class="company-name">{{ department.dept_full_name }}</span>
         </div>
       </div>
     </nav>
 
-    <!-- Map and Login Container -->
-    <div class="map-container">
-      <!-- Layer Control on the left side -->
-      <div class="layer-control">
-        <label>Data Layers</label>
-        <div>
-          <input type="radio" name="mapLayer" id="osmLayer" checked />
-          OpenStreetMap
-        </div>
-        <div>
-          <input type="radio" name="mapLayer" id="topologyLayer" /> Topology
-        </div>
-        <div>
-          <input type="radio" name="mapLayer" id="satelliteLayer" /> Satellite
-        </div>
+    <!-- Login Container -->
+    <div class="login-container">
+      <div class="login-header m-auto">
+        <h3>Login to Your Account</h3>
       </div>
 
-      <div id="map"></div>
+      <div id="alertWrapper" style="margin: 0px">
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+      </div>
 
-      <!-- Login Form -->
-      <div class="login-container">
-        <div class="login-header m-auto">
-          <h3>Login to Your Account</h3>
+      <form method="POST" action="{% url 'login' dept_name=department.dept_name %}" id="login-form">
+        {% csrf_token %}
+        <div class="my-3">
+          <label for="u_user_id" class="form-label">Username</label>
+          <input
+            type="text"
+            class="form-control"
+            id="u_user_id"
+            name="u_user_id"
+            placeholder="Enter your username"
+            required
+          />
         </div>
 
-        <div id="alertWrapper" style="margin: 0px"></div>
+        <div class="mb-3">
+          <label for="u_password" class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="u_password"
+            name="u_password"
+            placeholder="Enter your password"
+            required
+          />
+        </div>
 
-        <form method="POST" action="{% url 'login' org=department.org_id %}" id="login-form">
-          {% csrf_token %}
-          <div class="mb-3">
-            <label for="u_user_id" class="form-label">Username</label>
+        <div class="my-3 d-flex justify-content-between align-items-center">
+          <div class="form-check">
             <input
-              type="text"
-              class="form-control"
-              id="u_user_id"
-              name="u_user_id"
-              placeholder="Enter your username"
-              required
+              class="form-check-input"
+              type="checkbox"
+              id="rememberMe"
+              name="remember_me"
             />
+            <label class="form-check-label" for="rememberMe"
+              >Remember me</label
+            >
           </div>
+          <a href="#" class="forgot-password">Forgot password?</a>
+        </div>
 
-          <div class="mb-3">
-            <label for="u_password" class="form-label">Password</label>
-            <input
-              type="password"
-              class="form-control"
-              id="u_password"
-              name="u_password"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+        <button type="submit" class="btn btn-login mb-3">Login</button>
 
-          <div class="my-3 d-flex justify-content-between align-items-center">
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                id="rememberMe"
-                name="remember_me"
-              />
-              <label class="form-check-label" for="rememberMe"
-                >Remember me</label
-              >
-            </div>
-            <a href="#" class="forgot-password">Forgot password?</a>
-          </div>
-
-          <button type="submit" class="btn btn-login mb-3">Login</button>
-
-          <div class="text-center">
-            <p>
-              Don't have an account?
-              <a href="#" class="forgot-password">Signup</a>
-            </p>
-            <p>
-              <a
-                href="https://mounarchtech.com/cidco/admin/login.php?project_id=21&project_name=Jalna&type=1"
-                target="_blank"
-                class="survey-properties fw-bolder"
-                >Login to Survey Properties</a
-              >
-            </p>
-            <p>
-              <strong>Department Link:</strong>
-              <a href="{{ department.link }}" class="survey-properties fw-bolder">
-                {{ department.link }}
-              </a>
-            </p>
-          </div>
-        </form>
-      </div>
+        <div class="text-center">
+          <p>
+            Don't have an account?
+            <a href="#" class="forgot-password">Signup</a>
+          </p>
+          <p>
+            <a
+              href="https://mounarchtech.com/cidco/admin/login.php?project_id=21&project_name=Jalna&type=1"
+              target="_blank"
+              class="survey-properties fw-bolder"
+              >Login to Survey Properties</a
+            >
+          </p>
+        </div>
+      </form>
     </div>
 
     <!-- Profile Selection Modal -->
@@ -425,88 +340,21 @@
         </div>
       </div>
     </div>
+    <footer class="footer mt-auto" style="background-color: #37196e;color: #ddd;">
+        <div class="container-fluid text-center fw-bold d-flex justify-content-center align-items-center flex-wrap"
+            style="gap: 12px; padding: 6px 10px;">
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <img src="{% static 'images/MTSS_Logo.png' %}" alt="Monarch Logo" width="50" height="50"
+                    style="border-radius: 50%; border: 2px solid white; background-color: white; padding: 3px; object-fit: contain;">
+            </div>
+            
+            <div style="text-align: left;">
+                <small>© 2025 Monarch Surveyors & Engineering Consultants Ltd. All rights reserved.</small><br>
+                <small style="padding-left: 22px;" >Designed & Developed by Mounarch Tech Solutions & Systems Pvt. Ltd.</small>
+            </div>
+        </div>
+    </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      // Initialize the map centered on Maharashtra
-      const map = L.map("map", {
-        center: [20.5937, 78.9629], // Centered on India
-        zoom: 5, // Reduced zoom level to show more of India
-        minZoom: 4, // Prevent zooming out too far
-        maxBounds: [
-          [6.0, 68.0],
-          [36.0, 98.0],
-        ], // India bounds with some buffer
-        maxBoundsViscosity: 1.0, // Strict bounds
-      });
-
-      // Tile Layers
-      const osmLayer = L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          attribution:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19,
-        }
-      );
-
-      const satelliteLayer = L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        {
-          attribution:
-            "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-          maxZoom: 19,
-        }
-      );
-
-      const topologyLayer = L.tileLayer(
-        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-        {
-          attribution:
-            'Map data: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-          maxZoom: 17,
-        }
-      );
-
-      const layers = {
-        osm: osmLayer,
-        topology: topologyLayer,
-        satellite: satelliteLayer,
-      };
-
-      osmLayer.addTo(map);
-      let currentLayer = osmLayer;
-
-      const layerRadios = document.querySelectorAll('input[name="mapLayer"]');
-      layerRadios.forEach((input) => {
-        input.addEventListener("change", function () {
-          if (this.checked) {
-            const layerId =
-              this.id === "topologyLayer"
-                ? "topology"
-                : this.id === "osmLayer"
-                ? "osm"
-                : "satellite";
-            if (currentLayer) {
-              map.removeLayer(currentLayer);
-            }
-            const newLayer = layers[layerId];
-            newLayer.addTo(map);
-            currentLayer = newLayer;
-            map.invalidateSize();
-          }
-        });
-      });
-
-      map.fitBounds([
-        [6.0, 68.0],
-        [36.0, 98.0],
-      ]);
-    </script>
   </body>
 </html>
