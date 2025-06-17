@@ -1,7 +1,10 @@
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.core.validators import RegexValidator
+from django.contrib.auth.hashers import make_password
 import re
+from django.contrib.postgres.fields import ArrayField
 
 class UniqueIdHeaderAll(models.Model):
     table_name = models.CharField(max_length=100)
@@ -81,6 +84,57 @@ class UniqueIdHeaderAll(models.Model):
     def __str__(self):
         return f"{self.table_name}"
 
+class Profile_header_all(models.Model):
+    STATUS_CHOICES = (
+        (1, 'Active'),
+        (0, 'Deactive'),
+    )
+
+    profile_id = models.CharField(max_length=20, unique=True, blank=True)
+    profile_name = models.CharField(max_length=100)
+    pro_form_ids = ArrayField(models.CharField(max_length=100), blank=True, null=True, default=list)
+    pro_process_ids = ArrayField(models.CharField(max_length=100), blank=True, null=True, default=list)
+    inserted_on = models.DateTimeField(auto_now_add=True)
+    deactivated_on = models.DateTimeField(blank=True, null=True, default=None)
+    profile_status = models.IntegerField(choices=STATUS_CHOICES, default=1)
+
+    def __str__(self):
+        return f"{self.profile_id} - {self.profile_name}"
+
+    def save(self, *args, **kwargs):
+        if not self.profile_id:
+            unique_id, _ = UniqueIdHeaderAll.objects.get_or_create(
+                table_name='profile_header_all',
+                id_for='profile_id',
+                defaults={
+                    'prefix': 'PFL',
+                    'last_id': '',
+                    'created_on': timezone.now(),
+                    'modified_on': timezone.now()
+                }
+            )
+            self.profile_id = unique_id.get_next_id()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_assign_profile_id(cls, profile_name):
+        existing_profile = cls.objects.filter(profile_name=profile_name).first()
+        if existing_profile:
+            return existing_profile.profile_id
+        unique_id, _ = UniqueIdHeaderAll.objects.get_or_create(
+            table_name='profile_header_all',
+            id_for='profile_id',
+            defaults={
+                'prefix': 'PFL',
+                'last_id': '',
+                'created_on': timezone.now(),
+                'modified_on': timezone.now()
+            }
+        )
+        return unique_id.get_next_id()
+    
+
+
 
 class Department(models.Model):
     dept_id = models.CharField(max_length=20, unique=True, blank=True)
@@ -92,8 +146,8 @@ class Department(models.Model):
     dept_status = models.IntegerField(choices=[(0, 'Suspend'), (1, 'Active')], default=1)
     dept_admins_users = models.PositiveIntegerField(default=0)
     link = models.URLField(max_length=200, blank=True)
-    dept_login_bg = models.ImageField(upload_to='department_backgrounds/login/', null=True, blank=True)  # Background for login page
-    dept_dashboard_bg = models.ImageField(upload_to='department_backgrounds/dashboard/', null=True, blank=True)  # Background for dashboard page
+    dept_login_bg = models.ImageField(upload_to='department_backgrounds/login/', null=True, blank=True)
+    dept_dashboard_bg = models.ImageField(upload_to='department_backgrounds/dashboard/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.dept_id} - {self.dept_name}"
@@ -129,6 +183,83 @@ class Department(models.Model):
             id_for='dept_id',
             defaults={
                 'prefix': 'DEP',
+                'last_id': '',
+                'created_on': timezone.now(),
+                'modified_on': timezone.now()
+            }
+        )
+        return unique_id.get_next_id()
+
+class User_header_all(models.Model):
+    mobile_validator = RegexValidator(
+        regex=r'^[6-9]\d{9}$',
+        message='Mobile number must be 10 digits and start with 6, 7, 8, or 9.'
+    )
+    STATUS_CHOICES = (
+        (1, 'Active'),
+        (0, 'Deactive'),
+    )
+    USER_TYPE_CHOICES = (
+        (1, 'Platform owner'),
+        (2, 'Department'),
+        (3, 'Contractor'),
+    )
+
+    user_id = models.CharField(max_length=15, blank=True)
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField(max_length=150, blank=True)
+    username = models.CharField(max_length=150)
+    password = models.CharField(max_length=128)
+    mobile_no = models.CharField(max_length=10, blank=True, validators=[mobile_validator])
+    line_no = models.IntegerField(default=0)
+    profile_id = models.ForeignKey(
+        'Profile_header_all',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        to_field='profile_id',
+        related_name='user_assignments'
+    )
+    department = models.ForeignKey(
+        'Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        to_field='dept_id',
+        related_name='users'
+    )
+    project_id = models.JSONField(default=dict, null=True, blank=True)
+    user_type = models.IntegerField(choices=USER_TYPE_CHOICES, blank=True, null=True)
+    status = models.IntegerField(choices=STATUS_CHOICES, default=1)
+    inserted_on = models.DateTimeField(auto_now_add=True)
+    deactivated_on = models.DateTimeField(blank=True, null=True, default=None)
+
+    class Meta:
+        unique_together = ('user_id', 'line_no')
+
+    def __str__(self):
+        return f"{self.user_id} - {self.username} (Line {self.line_no})"
+
+    def save(self, *args, **kwargs):
+        if not self.user_id:
+            self.user_id = self.get_or_assign_user_id(self.username)
+        
+        if self.password and not self.password.startswith('pbkdf2_'):
+            self.password = make_password(self.password)
+        
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_assign_user_id(cls, username):
+        existing_user = cls.objects.filter(username=username, line_no=0).first()
+        if existing_user:
+            return existing_user.user_id
+
+        unique_id, _ = UniqueIdHeaderAll.objects.get_or_create(
+            table_name='user_header_all',
+            id_for='user_id',
+            defaults={
+                'prefix': 'UHA',
                 'last_id': '',
                 'created_on': timezone.now(),
                 'modified_on': timezone.now()
