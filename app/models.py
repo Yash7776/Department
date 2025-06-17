@@ -133,9 +133,6 @@ class Profile_header_all(models.Model):
         )
         return unique_id.get_next_id()
     
-
-
-
 class Department(models.Model):
     dept_id = models.CharField(max_length=20, unique=True, blank=True)
     dept_name = models.CharField(max_length=100, unique=True)
@@ -153,6 +150,10 @@ class Department(models.Model):
         return f"{self.dept_id} - {self.dept_name}"
 
     def save(self, *args, **kwargs):
+        # Convert dept_name to lowercase
+        if self.dept_name:
+            self.dept_name = self.dept_name.lower()
+
         if not self.dept_id:
             unique_id, _ = UniqueIdHeaderAll.objects.get_or_create(
                 table_name='department',
@@ -175,6 +176,8 @@ class Department(models.Model):
 
     @classmethod
     def get_or_assign_dept_id(cls, dept_name):
+        # Ensure dept_name is lowercase when querying or assigning
+        dept_name = dept_name.lower()
         existing_dept = cls.objects.filter(dept_name=dept_name).first()
         if existing_dept:
             return existing_dept.dept_id
@@ -189,6 +192,8 @@ class Department(models.Model):
             }
         )
         return unique_id.get_next_id()
+
+
 
 class User_header_all(models.Model):
     mobile_validator = RegexValidator(

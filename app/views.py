@@ -34,7 +34,8 @@ def login(request, dept_name):
                 logger.debug(f"User {username} attempted login from incorrect department URL: {dept_name}")
                 return render(request, 'login.html', {
                     'department': department,
-                    'error': f"You can only log in from http://127.0.0.1:8000/login/{base_user.department.dept_name}"
+                    # 'error': f"You can only log in from http://127.0.0.1:8000/login/{base_user.department.dept_name}"
+                    'error': f"You Cannot Acces This Department"
                 })
 
             # Verify the password
